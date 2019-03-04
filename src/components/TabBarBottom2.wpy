@@ -1,0 +1,89 @@
+<template>
+  <view class="swiper-tab">
+    <view wx:for="{{tabBarBottomCacheData[userInfoCacheData.role]}}" wx:key="index" class="swiper-tab-list {{item.isSelected ? 'active' : ''}}" bindtap="swichNav({{index}})">
+      <view>
+        <image src="{{item.isSelected ? item.img : item.bar}}" class="tabImg"></image>
+      </view>
+      <view>
+        <text>{{item.name}}</text>
+      </view>
+    </view>
+  </view>
+</template>
+
+<script>
+  import wepy from 'wepy'
+  import {
+    getStore,
+    connect
+  } from 'wepy-redux'
+  const store = getStore()
+  @connect({
+    tabBarBottomCacheData: state => state.cache.tabBarBottomCacheData,
+    userInfoCacheData: state => state.cache.userInfoCacheData
+  })
+  export default class TabBar extends wepy.component {
+    props = {}
+    methods = {
+      swichNav(event) {
+        let data = this.tabBarBottomCacheData
+        data[this.userInfoCacheData.role].filter((item, index) => {
+          data[this.userInfoCacheData.role][index].isSelected = false
+          return index === event
+        }).map((item, i) => {
+          data[this.userInfoCacheData.role][item.index].isSelected = true
+        })
+        store.dispatch({
+          type: 'CACHE_TABBAR_BOTTOM_DATA',
+          payload: data
+        })
+        wepy.reLaunch({
+          url: this.tabBarBottomCacheData[this.userInfoCacheData.role][event].routerLink
+        })
+      }
+    }
+    onLoad() {}
+  }
+</script>
+
+<style lang="less">
+  .tabImg {
+    display: inline-block;
+    height: 70rpx;
+    width: 70rpx;
+    z-index: 1;
+  }
+  .swiper-tab {
+    width: 100%;
+    border-top: 1rpx solid #eee;
+    text-align: center;
+    line-height: 60rpx;
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    position: fixed;
+    left: 0;
+    bottom: 0;
+    z-index: 10;
+    background: #fff;
+  }
+  .swiper-tab-list {
+    height: 100rpx;
+    flex: 1;
+    font-size: 24rpx;
+    color: #777777;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    z-index: 100;
+    view {
+      flex: 1;
+      height: 50rpx;
+    }
+  }
+  .active {
+    color: #C7002D;
+  }
+</style>

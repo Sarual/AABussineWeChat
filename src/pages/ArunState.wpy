@@ -1,0 +1,483 @@
+<template>
+  <TitleBar :titleText.sync="titleText" :switchTabName.sync="switchTabName">
+  </TitleBar>
+  <view class="runState-page">
+    <view class="container">
+      <view class="optTime">
+        <picker bindchange="selectedTime" value="{{date}}" mode="date" class="picker">
+          <text>{{showDate}}</text>
+          <text>▼</text>
+        </picker>
+      </view>
+      <view class="dataCon" style="border-radius:20rpx;">
+        <view class="sumMoney">
+          <view class="left">
+            <view>{{currentMonth}}累计营业额</view>
+            <view class="num">
+              <view>{{runDataList.data.yesterDayData.totalAmount}}<text style="font-size:30rpx">元</text><text> 共售出{{runDataList.data.yesterDayData.totaljianye}}间/夜</text></view>
+              <view></view>
+            </view>
+          </view>
+          <view class="right" @tap="goDetail()">
+            查看详情 >>
+          </view>
+        </view>
+        <view class="corner cornerPub">
+        </view>
+        <view class="cornerMask cornerPub">
+        </view>
+        <view class="runType">
+          <view class="typeCon top">
+            <view class="left pub">
+              <view class="pub1">昨日入住率</view>
+              <view class="pub2">{{runDataList.data.yesterDayData.totalpercentage}}<text style="font-size:24rpx">%</text></view>
+            </view>
+            <view class="right pub">
+              <view class="pub1 pub3">昨日营业额</view>
+              <view class="pub2">{{runDataList.data.yesterDayData.paymoneyTotal}}<text style="font-size:30rpx">元</text></view>
+            </view>
+          </view>
+          <view class="typeCon sec">
+            <view class="left pub">
+              <view class="pub1">昨日平均房价</view>
+              <view class="pub2">{{runDataList.data.yesterDayData.avgRoomPriceYes}}<text style="font-size:30rpx">元</text></view>
+            </view>
+            <view class="right pub">
+              <view class="pub1 pub3 zh-en">
+                <view class="top">昨日有效房价</view>
+                <view class="bottom">(RVEPRA)</view>
+              </view>
+              <image src="{{srcActive?'../assets/images/runState/whatGray.png':'../assets/images/runState/whatGray.png'}}" class="img" @tap="popState">
+              </image>
+              <view class="pub2">{{runDataList.data.yesterDayData.avgRoomPrice}}<text style="font-size:30rpx">元</text></view>
+            </view>
+          </view>
+        </view>
+      </view>
+      <view class="priceChart" style="border-radius:10rpx;">
+        <view class="chart">
+          <view class="text"><text>营收动态</text><text>({{tipStartDate}}-{{tipEndDate}})</text></view>
+          <view class="canvasCon">
+            <canvas disable-scroll="true" bindtouchstart="touchStart" bindtouchmove="touchMove" bindtouchend="touchEnd" wx:if="{{showCanvas}}" canvas-id="lineCanvas2" class="lineCanvas" disable-scroll="true"></canvas>
+            <image wx:else src="{{lineImg}}" style="width:660rpx;heigth:360rpx;" /></image>
+          </view>
+        </view>
+      </view>
+    </view>
+  </view>
+  <!-- <cover-view id='mask'></cover-view> -->
+  <view class="mask" wx:if="{{showState}}">
+    <view class="smCon">
+      <image src="../assets/images/runState/close.png" class="close" bindtap="confirm">
+      </image>
+      <image class="bgcImg" src="../assets/images/runState/revpra.png">
+      </image>
+      <view bindtap="confirm">知道了</view>
+    </view>
+  </view>
+  <TabBarBottom2></TabBarBottom2>
+</template>
+
+<script>
+  import wepy from 'wepy'
+  import base from '../mixins/base'
+  import http from '../mixins/http'
+  import {
+    service
+  } from '../assets/interface/interface.js'
+  import tip from '../assets/utils/tip.js'
+  var WxCharts0 = require('../assets/utils/wxcharts.js')
+  var lineChart = null
+  import TitleBar from '../components/TitleBar'
+  import TabBarBottom2 from '../components/TabBarBottom2'
+  export default class ArunState extends wepy.page {
+    mixins = [base, http]
+    config = {}
+    data = {
+      titleText: '',
+      date: '2018-09-11',
+      showDate: '',
+      switchTabChart: 0,
+      runDataList: {},
+      oneMonthCategories: [],
+      oneMonthSeries: [{
+        name: '当日收益',
+        data: [],
+        color: '#F6CE6C'
+      }],
+      srcActive: false,
+      showState: false,
+      tipStartDate: '',
+      tipEndDate: '',
+      currentMonth: '',
+      showCanvas: true,
+      lineImg: ''
+    }
+    components = {
+      TitleBar,
+      TabBarBottom2
+    }
+    onLoad(options) {
+      this.titleText = '经营状况'
+      this.showDate = this.getDateFormat(this.date)
+      this.currentMonth = this.getNY(this.date)
+      this.getData(this.date)
+    }
+    onShow() {}
+    // 显示1个月动态
+    showMoth() {
+      var canvasId = 'lineCanvas2'
+      this.showLine(canvasId, this.oneMonthCategories, this.oneMonthSeries)
+    }
+    // 显示折线图
+    showLine(canvasId, categories, series) {
+      let windowWidth = 200
+      try {
+        let res = wx.getSystemInfoSync()
+        windowWidth = res.windowWidth
+      } catch (e) {}
+      lineChart = new WxCharts0({
+        canvasId: canvasId,
+        type: 'line',
+        categories: categories,
+        series: series,
+        width: windowWidth - 30,
+        height: 240,
+        xAxis: {
+          disableGrid: true
+        },
+        yAxis: {
+          min: 0,
+          format: function(val) {
+            return val + '元'
+          }
+        },
+        // 配置该折线图可滑动
+        enableScroll: true,
+        dataLabel: true,
+        dataPointShape: false
+      })
+    }
+    methods = {
+      selectedTime(e) {
+        let value = e.detail.value
+        this.showDate = this.getDateFormat(value)
+        this.currentMonth = this.getNY(value)
+        this.date = value
+        this.oneMonthCategories = []
+        this.oneMonthSeries[0].data = []
+        this.getData(value)
+      },
+      goDetail() {
+        this.$goto('AbusineBranch/occupancyRate')
+      },
+      popState() {
+        let that = this
+        that.drawImgChart()
+        that.showCanvas = false
+        that.srcActive = true
+        that.showState = true
+        that.getData(that.date)
+      },
+      confirm() {
+        let that = this
+        that.showState = false
+        that.srcActive = false
+        that.showCanvas = true
+        that.getData(that.date)
+      },
+      // 图表滑动
+      touchStart(e) {
+        lineChart.scrollStart(e)
+      },
+      touchMove(e) {
+        lineChart.scroll(e)
+      },
+      touchEnd(e) {
+        lineChart.scrollEnd(e)
+        lineChart.showToolTip(e, {
+          format: function(item, category) {
+            // 2018-08-14 当日收益:800
+            return category + ' 收益 : ' + item.data
+            // 600
+            // return item.data
+          }
+        })
+      }
+    }
+    // 请求数据
+    getData(value) {
+      tip.loading()
+      const that = this
+      that.$post({
+        url: service.getRunData,
+        data: {
+          select_time: value,
+          SM_HotelId: '00650'
+          // SM_HotelId: wepy.getStorageSync('shopId')
+        }
+      }, {
+        success: ({
+          data
+        }) => {
+          let code = data.errorCode
+          if (code === 0) {
+            that.parseData(data.data)
+            that.runDataList = data
+            that.$apply()
+          } else {
+            tip.alert(data.errorDesc)
+          }
+        }
+      })
+    }
+    // 解析数据
+    parseData(cicleData) {
+      tip.loaded()
+      let monthDataList = cicleData.onemonthData
+      let length = monthDataList.length
+      let tipStartDate = this.getNYR(monthDataList[0].atime)
+      let tipEndDate = this.getNYR(monthDataList[length - 1].atime)
+      for (let key in monthDataList) {
+        let item = monthDataList[key]
+        this.oneMonthCategories.push(item.atime)
+        this.oneMonthSeries[0].data.push(item.roomfeeamount)
+      }
+      this.tipStartDate = tipStartDate
+      this.tipEndDate = tipEndDate
+      this.showMoth()
+    }
+    // 图表图片绘制
+    drawImgChart() {
+      let that = this
+      wx.canvasToTempFilePath({
+        // x: 0,
+        // y: 0,
+        // width: 580,
+        // height: 700,
+        canvasId: 'lineCanvas2',
+        success: function(res) {
+          console.log('绘制图片', res)
+          that.lineImg = res.tempFilePath
+        }
+      })
+    }
+  }
+</script>
+
+<style lang="scss" rel="stylesheet/scss" scoped>
+  @import '../assets/stylesheets/layout.scss';
+  .runState-page {
+    width: 100%;
+    font-size: 28rpx;
+    color: #333333;
+    .container {
+      margin: 20rpx 30rpx;
+      .optTime {
+        border-radius: 10rpx;
+        font-size: 26rpx;
+        height: 80rpx;
+        line-height: 80rpx;
+        padding: 0 20rpx;
+        background-color: #fff;
+        text {
+          &:nth-of-type(2) {
+            float: right;
+            height: 24rpx;
+            width: 24rpx;
+            color: #333333;
+          }
+        }
+      }
+      .dataCon {
+        .sumMoney {
+          display: flex;
+          justify-content: space-between;
+          height: 148rpx;
+          margin-top: 10rpx;
+          background-color: #fff;
+          padding: 0 20rpx;
+          border-radius: 10rpx 10rpx 0 0;
+          view {
+            font-size: 24rpx;
+            line-height: 60rpx;
+          }
+          .left {
+            .num {
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              view {
+                color: #f96314;
+                &:nth-of-type(1) {
+                  font-size: 44rpx;
+                  text:nth-of-type(2) {
+                    font-size: 24rpx;
+                    color: #333333;
+                  }
+                }
+                &:nth-of-type(2) {
+                  font-size: 26rpx;
+                  text-align: right;
+                }
+              }
+            }
+          }
+          .right {
+            color: #8FBBEE;
+          }
+        }
+        .cornerPub {
+          position: absolute;
+          left: 50%;
+          transform: translateX(-50%);
+        }
+        .corner {
+          width: 0px;
+          height: 0px;
+          border: 14px solid #cccccc;
+          border-bottom-color: transparent;
+          border-left-color: transparent;
+          border-right-color: transparent;
+        }
+        .cornerMask {
+          width: 0px;
+          height: 0px;
+          border: 13px solid #ffffff;
+          border-bottom-color: transparent;
+          border-left-color: transparent;
+          border-right-color: transparent;
+        }
+        .runType {
+          font-size: 0;
+          background-color: #fff;
+          border-top: 1px solid #ccc;
+          border-radius: 0 0 10rpx 10rpx;
+          .typeCon {
+            height: 86rpx;
+            padding: 0 20rpx;
+            font-size: 30rpx;
+            display: flex;
+            flex-direction: row;
+            border-bottom: 1px solid #F3EEEE;
+            .pub {
+              flex: 1;
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              .pub1 {
+                font-size: 20rpx;
+              }
+              .pub2 {
+                font-size: 40rpx;
+                color: #f96314;
+              }
+              .pub3 {
+                padding-left: 20rpx;
+              }
+            }
+            .left {
+              padding-right: 30rpx;
+            }
+            .right {
+              padding-right: 30rpx;
+              border-left: 1px solid #F3EEEE;
+            }
+          }
+          .sec {
+            .right {
+              position: relative;
+              .zh-en {
+                display: flex;
+                flex-direction: column;
+              }
+              .img {
+                width: 32rpx;
+                height: 34rpx;
+                position: absolute;
+                top: 10rpx;
+                right: -10rpx;
+              }
+            }
+          }
+        }
+      }
+      .priceChart {
+        /* position: relative; */
+        margin-top: 24rpx;
+        background-color: #fff;
+        text-align: center;
+        .text {
+          padding-top: 20rpx;
+          font-size: 30rpx;
+          font-weight: 500;
+          display: flex;
+          flex-direction: column;
+          text {
+            &:nth-of-type(2) {
+              font-size: 20rpx;
+              color: #333333;
+              font-weight: 400;
+            }
+          }
+        }
+        .canvasCon {
+          width: 100%;
+          height: 500rpx;
+          padding: 20rpx 0 18rpx 0;
+          canvas {
+            height: 100%;
+            width: 100%;
+          }
+        }
+      }
+    }
+  }
+  .mask {
+    position: fixed;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 750rpx;
+    height: 100%;
+    background: rgba(151, 151, 151, .5);
+    .smCon {
+      position: absolute;
+      left: 50%;
+      top: 360rpx;
+      transform: translateX(-50%);
+      border-radius: 10rpx;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      text-align: center;
+      z-index: 999;
+      .close {
+        position: absolute;
+        top: 24rpx;
+        right: 24rpx;
+        width: 36rpx;
+        height: 36rpx;
+      }
+      .bgcImg {
+        display: inline-block;
+        width: 550rpx;
+        height: 556rpx;
+      }
+      view {
+        position: absolute;
+        top: 586rpx;
+        left: 50%;
+        transform: translateX(-50%);
+        height: 80rpx;
+        width: 348rpx;
+        line-height: 80rpx;
+        color: #ffffff;
+        background-color: #F05442;
+        font-size: 28rpx;
+        border-radius: 40rpx;
+      }
+    }
+  }
+</style>

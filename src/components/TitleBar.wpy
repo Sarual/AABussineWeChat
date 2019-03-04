@@ -1,0 +1,105 @@
+<template>
+<div>
+  <view class="tabBarCustom" style="height: {{barHeight}}px">
+    <image style="top: {{barTitleImgHeight}}px" src="{{barBackBtn}}" @tap="back" wx:if="{{isBackBtn}}"></image>
+    <text style="margin-top: {{barTitleHeight}}px">{{titleText}}</text>
+  </view>
+  <view class="seat" style="height: {{barHeight}}px"></view>
+</div>
+</template>
+<script>
+import wepy from 'wepy'
+export default class TitleBar extends wepy.component {
+  props = {
+    barHeight: {
+      type: [String, Number],
+      default: 0
+    },
+    barTitleImgHeight: {
+      type: [String, Number],
+      default: 0
+    },
+    barTitleHeight: {
+      type: [String, Number],
+      default: 0
+    },
+    barBackBtn: {
+      type: [String],
+      default: '../assets/images/components/back.png'
+    },
+    isBackBtn: {
+      type: [Boolean],
+      default: false
+    },
+    isShareBtn: {
+      type: [Boolean],
+      default: false
+    },
+    titleText: {
+      type: [String, Object],
+      default: null
+    },
+    formId: {
+      type: [String],
+      default: null
+    },
+    switchTabName: {
+      type: [String],
+      default: '0'
+    }
+  }
+  computed = {
+    init() {
+      if (this.isShareBtn) {
+        this.barBackBtn = '../assets/images/home/back.png'
+      }
+      let sys = wepy.getSystemInfoSync()
+      this.barTitleImgHeight = sys.statusBarHeight + 10
+      this.barTitleHeight = sys.statusBarHeight + 8
+      this.barHeight = sys.statusBarHeight + 32 + 16
+    }
+  }
+  methods = {
+    back () {
+      if (this.isShareBtn) {
+        wepy.redirectTo({
+          url: 'home'
+        })
+      } else {
+        wepy.navigateBack({
+          delta: 1
+        })
+      }
+    }
+  }
+}
+</script>
+<style lang="scss" rel="stylesheet/scss" scoped>
+@import "../assets/stylesheets/layout.scss";
+.tabBarCustom {
+  width: 100%;
+  z-index: 10;
+  background: #C7002D;
+  overflow: hidden;
+  position: fixed;
+  image {
+    width: 22rpx;
+    height: 34rpx;
+    display: inline-block;
+    position: absolute;
+    left: 30rpx;
+    z-index: 3;
+  }
+  text {
+    color: #ffffff;
+    font-size: 32rpx;
+    font-weight: 600;
+    text-align: center;
+    display: block;
+  }
+}
+.seat {
+  width: 100%;
+  overflow: hidden;
+}
+</style>

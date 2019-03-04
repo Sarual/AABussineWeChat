@@ -1,0 +1,16 @@
+node_modules
+dist
+*.log
+.DS_Store
+.wepycache
+.project.config.json
+
+# idea vsCode ignore
+/.vscode
+.settings/
+.buildpath
+.project
+.idea/
+*.ipr
+*.iml
+*.iws

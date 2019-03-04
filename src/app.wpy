@@ -1,0 +1,78 @@
+<script>
+  import wepy from 'wepy'
+  import 'wepy-async-function'
+  import {
+    service
+  } from '../src/assets/interface/interface.js'
+  import {
+    setStore
+  } from 'wepy-redux'
+  import configStore from './store'
+  const store = configStore()
+  setStore(store)
+  export default class extends wepy.app {
+    config = {
+      pages: [
+        'pages/login',
+        'pages/ArunState',
+        'pages/AroomState',
+        'pages/AorderList',
+        'pages/AshareMember',
+        'pages/AbusineBranch/occupancyRate',
+        'pages/test'
+      ],
+      window: {
+        backgroundTextStyle: 'light',
+        navigationBarBackgroundColor: '#fff',
+        navigationBarTextStyle: 'black',
+        navigationBarTitleText: 'tabBar', // 配置底部导航
+        onReachBottom: true,
+        navigationStyle: 'custom'
+      },
+      'permission': {
+        'scope.userLocation': {
+          desc: '你的位置信息将用于小程序位置接口的效果展示'
+        }
+      }
+    }
+    globalData = {
+      pathUrl: null,
+      isLogin: true,
+      accessToken: ''
+    }
+    constructor() {
+      super()
+      // 修复小程序请求并发问题
+      this.use('requestfix')
+    }
+    onLaunch(options) {
+      console.log('options', options)
+      this.globalData.pathUrl = options.path
+      this.globalData.accessToken = wepy.getStorageSync(service.isFormal ? 'accessToken' : 'accessTokenInfo') || false
+      if (this.globalData.isLogin) {
+        // 如果登陆
+        this.globalData.isLogin = false
+        this.loginToken()
+      }
+    }
+    onShow() {
+      wepy.showShareMenu({
+        withShareTicket: true
+      })
+    }
+    onShareAppMessage() {
+      return {
+        title: 'AA连锁酒店',
+        desc: 'A&A连锁酒店是新时代互联网连锁品牌，由专业化的连锁酒店运营团队为合作酒店提供多项支持。',
+        path: 'pages/home'
+      }
+    }
+    loginToken() {
+
+    }
+  }
+</script>
+
+<style lang="scss" rel="stylesheet/scss" scoped>
+  @import "./assets/stylesheets/layout.scss";
+</style>

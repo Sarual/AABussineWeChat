@@ -1,0 +1,185 @@
+<template>
+  <TitleBar :titleText.sync="titleText" :switchTabName.sync="switchTabName">
+  </TitleBar>
+  <view class="canvasBox">
+    <canvas class="canvas" canvas-id="canvas" style="width: 750px;height: 568px;"></canvas>
+  </view>
+  <view class="shareWicket">
+    <view class="forward">
+      <view class="diagram">
+        <view class="detailed">
+          <text class="title">这个是标题</text>
+          <view class="person">
+            <label>市场商家</label>
+            <label>100</label>
+            <label>家以上</label>
+          </view>
+          <image class="code" mode="widthFix" src="../assets/images/login/AAlsjd.jpg" bindtap="previewImage" data-src='{{previewUrls[0]}}'></image>
+          <view class="userInfo" style="font-size:30rpx">
+            ID：12345
+          </view>
+        </view>
+      </view>
+      <form bindsubmit="formSubmit" bindreset="formReset" report-submit="true" class="formSub">
+        <button @tap="savePoster">保存图片</button>
+      </form>
+    </view>
+  </view>
+</template>
+
+<script>
+  import wepy from 'wepy'
+  import base from '../mixins/base'
+  import http from '../mixins/http'
+  import tip from '../assets/utils/tip.js'
+  import painter from '../mixins/painter'
+  import TitleBar from '../components/TitleBar'
+  export default class Test extends wepy.page {
+    mixins = [base, http, painter]
+    config = {
+      navigationBarTitleText: 'test'
+    }
+    components = {
+      TitleBar
+    }
+    data = {
+      titleText: '',
+      formId: null,
+      prizesDetails: {},
+      previewUrls: ['https://image.baidu.com/search/detail?ct=503316480&z=0&ipn=d&word=%E9%98%BFsa%E5%9B%BE%E7%89%87&step_word=&hs=2&pn=180&spn=0&di=18741736090&pi=0&rn=1&tn=baiduimagedetail&is=0%2C0&istype=0&ie=utf-8&oe=utf-8&in=&cl=2&lm=-1&st=undefined&cs=2862143691%2C2737551285&os=3593728656%2C1480300585&simid=3402467415%2C547522734&adpicid=0&lpn=0&ln=1876&fr=&fmq=1550040138281_R&fm=&ic=undefined&s=undefined&hd=undefined&latest=undefined&copyright=undefined&se=&sme=&tab=0&width=undefined&height=undefined&face=undefined&ist=&jit=&cg=&bdtype=0&oriquery=&objurl=http%3A%2F%2Fimg5.cache.netease.com%2Fent%2F2012%2F2%2F15%2F20120215094504778c1.jpg&fromurl=ippr_z2C%24qAzdH3FAzdH3Fjgp_z%26e3B8mn_z%26e3Bv54AzdH3F8dAzdH3Fad8cAzdH3FalAzdH3F0QlVD0MMaaan8GVS_z%26e3Bip4s&gsm=96&rpstart=0&rpnum=0&islist=&querylist=&force=undefined', 'https://avatar.csdn.net/4/6/5/2_qq_35713752.jpg'],
+      shareUserId: null
+    }
+    onLoad(options) {
+      console.log('opt-test', options)
+      this.titleText = 'test'
+      this.createCanvas()
+    }
+    onShow() {}
+    methods = {
+      formSubmit(event) {
+        let formId = event.detail.formId
+        if (
+          formId !== 'the formId is a mock one' &&
+          !this.isUndefined(formId) &&
+          formId !== '' &&
+          formId !== null
+        ) {
+          this.formId = formId
+          // this.$updataFormId(this.formId)
+        }
+      },
+      // 保存海报
+      savePoster() {
+        wepy.showToast({
+          title: '生成中...',
+          icon: 'loading',
+          duration: 1000
+        })
+        console.log('canvasImg', this.canvasImg)
+        if (this.canvasImg !== '') {
+          wepy.getImageInfo({
+            src: this.canvasImg,
+            success: function(res) {
+              wepy.saveImageToPhotosAlbum({
+                filePath: res.path,
+                success(result) {
+                  wepy.showToast({
+                    title: '图片保存成功',
+                    icon: 'success'
+                  })
+                }
+              })
+            }
+          })
+        } else {
+          tip.alert('图片生成失败，请重试')
+        }
+      },
+      // 长按识别图片二维码
+      previewImage(e) {
+        // let that = this
+        let current = e.target.dataset.src
+        console.log('cur', current)
+        // wx.previewImage({
+        //   current: current,
+        //   urls: that.previewUrls
+        // })
+      }
+    }
+  }
+</script>
+
+<style lang="scss" rel="stylesheet/scss" scoped>
+  @import "../assets/stylesheets/layout.scss";
+  .canvasBox {
+    /* position: fixed;
+                    top: 0rpx;
+                    left: 0; */
+    /* z-index: 99999; */
+    .canvas {
+      background: #fff;
+    }
+  }
+  .shareWicket {
+    position: relative;
+    overflow: hidden;
+    .forward {
+      .diagram {
+        width: 532rpx;
+        display: block;
+        margin: 190rpx auto 20rpx auto;
+        overflow: hidden;
+        border-radius: 20rpx;
+        .detailed {
+          background: #fff;
+          padding: 32rpx;
+          position: relative;
+          .title {
+            font-size: 32rpx;
+            display: block;
+            color: #333333;
+            height: 40rpx;
+            overflow: hidden;
+          }
+          .person {
+            label {
+              font-size: 24rpx;
+              color: #0b0a0a;
+              display: inline-block;
+              &:nth-of-type(2) {
+                color: #ff4c21;
+              }
+            }
+          }
+          .code {
+            width: 200rpx;
+            height: 200rpx;
+            display: block;
+            margin: 32rpx auto 24rpx auto;
+            border-radius: 50rpx;
+          }
+          .userInfo {
+            margin-top: 10rpx;
+            overflow: hidden;
+          }
+        }
+      }
+      button {
+        width: 532rpx;
+        height: 80rpx;
+        border-radius: 50rpx;
+        background: #fa5c37;
+        color: #fff;
+        display: block;
+        font-size: 32rpx;
+        line-height: 80rpx;
+        &:nth-of-type(2) {
+          margin-top: 20rpx;
+          background: #fff;
+          color: #fa5c37;
+          border: 1rpx solid #fa5c37;
+        }
+      }
+    }
+  }
+</style>

@@ -1,0 +1,414 @@
+<template>
+  <TitleBar :titleText.sync="titleText" :isBackBtn.sync="isBackBtn" :barBackBtn.sync="barBackBtn">
+  </TitleBar>
+  <view class="occRate-page">
+    <view class="fixedCon">
+      <view class="beautyCon">
+        <image src="../../assets/images/AbusineBranch/BSbgc.png">
+        </image>
+      </view>
+      <view class="sumSale">
+        <view class="top">
+          <view class="num">
+            <text>{{occRateList.roomList.thisyearrentalNum}} </text><text>间夜</text>
+          </view>
+          <view>
+            {{occRateList.roomList.roomrate}}%
+          </view>
+          <view>
+            {{occRateList.roomList.roomavgfee}}元
+          </view>
+          <view>
+            {{occRateList.roomList.rentalNum}}元
+          </view>
+        </view>
+        <view class="bottom">
+          <text>累计售出</text>
+          <text>日均入住率</text>
+          <text>日均房价/间夜</text>
+          <text>有效房价</text>
+        </view>
+      </view>
+      <view class="optType">
+        <!-- <view style=" box-shadow: 0 3px 5px 0 rgba(0, 0, 0, 0.15);"> -->
+        <picker bindchange="selectedStartTime" value="{{startDateDefult}}" mode="date" class="picker">
+          <!-- <text class="pubText" wx:if="{{showStartInput}}">请选择年月日</text> -->
+          <text class="pubText">{{startDate}}</text>
+          <text class="optArrow">▼</text>
+        </picker>
+        <view>至</view>
+        <picker bindchange="selectedEndTime" value="{{endDateDefult}}" mode="date" class="picker">
+          <!-- <text class="pubText" wx:if="{{showEndInput}}">请选择年月日</text> -->
+          <text class="pubText">{{endDate}}</text>
+          <text class="optArrow">▼</text>
+        </picker>
+        <!-- </view> -->
+      </view>
+    </view>
+    <view class="container">
+      <view class="orderListCon" wx:for="{{occRateList.checkMap}}" wx:key="{{index}}" wx:for-item="item">
+        <view class="orderDetail">
+          <view wx:if="{{!item.isHasFold}}" @tap="choosenFold" data-index="{{index}}">
+            <view class="time">
+              <text>{{item.atime}}</text>
+              <image id="toHide" src="../../assets/images/AbusineBranch/toHide.png">
+              </image>
+            </view>
+            <view class="saleNum">
+              <view class="left">今日已售间夜：{{item.totaljianye}}</view>
+              <view class="right">今日入住率：{{item.totalpercentage}}</view>
+            </view>
+          </view>
+          <view wx:if="{{item.isHasFold}}" @tap="choosenFold" data-index="{{index}}">
+            <view class="time">
+              <text>{{item.atime}}</text>
+              <image id="toShow" src="../../assets/images/AbusineBranch/toShow.png">
+              </image>
+            </view>
+            <view class="saleNum">
+              <view class="left">今日已售间夜：{{item.totaljianye}}</view>
+              <view class="right">今日入住率：{{item.totalpercentage}}</view>
+            </view>
+          </view>
+          <view class="detailCon">
+            <view class="table" wx:if="{{item.isHasFold}}">
+              <view class="thead">
+                <text>房型</text><text>房间号</text><text>房价</text><text>抵离时间</text>
+              </view>
+              <view class="tbody">
+                <view class="tpub" wx:for="{{item.dataList}}" wx:key="key2">
+                  <text>{{item.rtname}}</text><text>{{item.rTCode}}</text><text>{{item.disprc}}</text><text>{{item.indatetime}}/{{item.overtime}}</text>
+                </view>
+              </view>
+            </view>
+          </view>
+        </view>
+      </view>
+    </view>
+    <Placeholder :show.sync="show" message="暂无数据"></Placeholder>
+  </view>
+</template>
+
+<script>
+  import wepy from 'wepy'
+  import base from '../../mixins/base'
+  import http from '../../mixins/http'
+  import {
+    service
+  } from '../../assets/interface/interface.js'
+  // import {
+  //   getTodayNYR
+  // } from '../../assets/utils/util.js'
+  import tip from '../../assets/utils/tip.js'
+  import TitleBar from '../../components/TitleBar'
+  import Placeholder from '../../components/Placeholder'
+  export default class AorderList extends wepy.page {
+    mixins = [base, http]
+    config = {}
+    data = {
+      titleText: '',
+      isBackBtn: true,
+      barBackBtn: '../../assets/images/components/back.png',
+      startDateDefult: '',
+      endDateDefult: '',
+      startDate: '',
+      endDate: '',
+      showStartInput: true,
+      showEndInput: true,
+      occRateList: [],
+      isFold: false,
+      show: false
+    }
+    components = {
+      TitleBar,
+      Placeholder
+    }
+    onLoad(options) {
+      this.barBackBtn = '../../assets/images/components/back.png'
+      this.getData(0)
+      this.$apply()
+    }
+    onShow() {
+      this.titleText = '营业报表'
+    }
+    methods = {
+      selectedStartTime(e) {
+        let value = e.detail.value
+        this.startDateDefult = value
+        this.startDate = this.getNYR(value)
+        this.showStartInput = false
+      },
+      selectedEndTime(e) {
+        // 结束时间选择完毕请求数据
+        let value = e.detail.value
+        this.endDateDefult = value
+        this.endDate = this.getNYR(value)
+        this.showEndInput = false
+        this.getData(1)
+      },
+      choosenFold(e) {
+        let index = e.currentTarget.dataset.index
+        this.occRateList.checkMap[index].isHasFold = !this.isFold
+        this.isFold = !this.isFold
+      }
+    }
+    getData(type) {
+      let that = this
+      tip.loading()
+      if (type === 0) {
+        that.$post({
+          url: service.monthRoomData,
+          data: {
+            // SM_HotelId: wepy.getStorageSync('shopId')
+            SM_HotelId: '00650'
+          }
+        }, {
+          success: ({
+            data
+          }) => {
+            let code = data.errorCode
+            if (code === 0) {
+              var occRateList = data.data
+              that.dealData(occRateList)
+              that.occRateList = occRateList
+            } else {
+              tip.alert(data.errorDesc)
+            }
+          }
+        })
+      } else if (type === 1) {
+        that.$post({
+          url: service.monthRoomData,
+          data: {
+            begin_time: that.startDateDefult,
+            end_time: that.endDateDefult,
+            // SM_HotelId: wepy.getStorageSync('shopId')
+            SM_HotelId: '00650'
+          }
+        }, {
+          success: ({
+            data
+          }) => {
+            let code = data.errorCode
+            if (code === 0) {
+              var occRateList = data.data
+              that.dealData(occRateList)
+              that.occRateList = occRateList
+            } else {
+              tip.alert(data.errorDesc)
+            }
+          }
+        })
+      }
+    }
+    dealData(occRateList) {
+      tip.loaded()
+      let length = occRateList.checkMap.length
+      let resStartDate = occRateList.checkMap[0].atime
+      let resEndDate = occRateList.checkMap[length - 1].atime
+      this.isNoneData(length)
+      occRateList.checkMap.map(item => {
+        item.isHasFold = false
+      })
+      this.startDate = resEndDate
+      this.endDate = resStartDate
+    }
+    isNoneData(length) {
+      if (length === 0) {
+        this.show = true
+      }
+    }
+  }
+</script>
+
+<style lang="scss" rel="stylesheet/scss" scoped>
+  @import "../../assets/stylesheets/layout.scss";
+  .occRate-page {
+    width: 100%;
+    position: relative;
+    overflow: hidden;
+    .fixedCon {
+      width: 100%;
+      z-index: 999;
+      position: fixed;
+      overflow: hidden;
+      background-color: #f5f5f5;
+      .beautyCon {
+        height: 196rpx;
+        width: 100%;
+        image {
+          height: 100%;
+          width: 100%;
+        }
+      }
+      .sumSale {
+        width: 90%;
+        position: absolute;
+        top: 130rpx;
+        left: 50%;
+        transform: translateX(-50%);
+        border-radius: 10rpx;
+        padding: 16rpx;
+        background-color: #fff;
+        .top {
+          font-size: 26rpx;
+          display: flex;
+          color: #F96314;
+          font-weight: 400;
+          padding-bottom: 10rpx;
+          .num {
+            text {
+              &:nth-of-type(1) {
+                font-size: 44rpx;
+                font-weight: 600;
+              }
+              &:nth-of-type(1) {
+                font-size: 29rpx;
+                font-weight: 500;
+              }
+            }
+          }
+          view {
+            flex: 1;
+            text-align: center;
+            line-height: 36rpx;
+          }
+        }
+        .bottom {
+          display: flex;
+          font-size: 24rpx;
+          color: #333333;
+          text {
+            flex: 1;
+            text-align: center;
+            line-height: 34rpx;
+            &:nth-of-type(1) {
+              font-weight: 500;
+            }
+          }
+        }
+      }
+      .optType {
+        height: 70rpx;
+        line-height: 80rpx;
+        margin-left: 20rpx;
+        margin-top: 64rpx;
+        margin-right: 20rpx;
+        margin-bottom: 10rpx;
+        font-size: 24rpx;
+        font-weight: 400;
+        border-radius: 10rpx;
+        display: flex;
+        justify-content: space-between;
+        box-shadow: 0 3px 5px 0 rgba(0, 0, 0, 0.15);
+        .picker {
+          width: 312rpx;
+          box-sizing: border-box;
+          padding: 0 20rpx;
+          border-radius: 10rpx;
+          display: flex;
+          justify-content: flex-end;
+          background-color: #fff;
+        }
+        .pubText {
+          display: inline-block;
+          color: #999999;
+          margin-right: 70rpx;
+        }
+        .optArrow {
+          bottom: 30rpx;
+          height: 24rpx;
+          width: 24rpx;
+          color: #333333;
+        }
+      }
+    }
+    .container {
+      margin-top: 360rpx;
+      .orderListCon {
+        background-color: #fff;
+        margin-left: 20rpx;
+        margin-top: 20rpx;
+        margin-right: 20rpx;
+        margin-bottom: 20rpx;
+        padding: 10rpx 20rpx;
+        border-radius: 10rpx;
+        .orderDetail {
+          .time {
+            font-size: 30rpx;
+            color: #333333;
+            font-weight: 500;
+            display: flex;
+            #toHide {
+              margin-top: 8rpx;
+              margin-left: 10rpx;
+              width: 16rpx;
+              height: 26rpx;
+            }
+            #toShow {
+              margin-top: 14rpx;
+              margin-left: 8rpx;
+              width: 26rpx;
+              height: 16rpx;
+            }
+          }
+          .saleNum {
+            font-size: 20rpx;
+            color: #333333;
+            line-height: 2;
+            display: flex;
+            justify-content: space-between;
+          }
+          .detailCon {
+            font-size: 24rpx;
+            .table {
+              border-top: 1px solid #979797;
+              .tpub {
+                display: flex;
+                justify-content: space-around;
+                text-align: center;
+                line-height: 50rpx;
+                text {
+                  flex: 1;
+                }
+              }
+              .thead {
+                font-weight: 500;
+                text {
+                  line-height: 50rpx;
+                  display: inline-block;
+                  &:nth-of-type(1) {
+                    width: 180rpx;
+                    text-align: center;
+                  }
+                  &:nth-of-type(2) {
+                    width: 150rpx;
+                    text-align: center;
+                  }
+                  &:nth-of-type(3) {
+                    width: 170rpx;
+                    text-align: center;
+                  }
+                  &:nth-of-type(4) {
+                    width: 160rpx;
+                    text-align: center;
+                  }
+                }
+              }
+              .tbody {
+                color: #333333;
+                font-weight: 400;
+                .tpub {
+                  padding: 0 10rpx;
+                  &:nth-of-type(2n+1) {
+                    background-color: #FFF4EE;
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+</style>

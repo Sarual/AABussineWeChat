@@ -1,0 +1,374 @@
+<template>
+  <TitleBar :titleText.sync="titleText" :switchTabName.sync="switchTabName">
+  </TitleBar>
+  <view class="roomState-page">
+    <view class="optCon">
+      <view class="optRoom">
+        <view class="opt left">
+          <picker bindchange="selectedRoomState" range="{{roomStateList}}" value="{{roomStateIndex}}">
+            <text>{{showRoomStateText}}</text>
+            <text>▼</text>
+          </picker>
+        </view>
+        <view class="opt right">
+          <picker bindchange="selectedRoomType" range="{{roomTypeList}}" value="{{roomTypeIndex}}">
+            <text>{{showRoomTypeText}}</text>
+            <text>▼</text>
+          </picker>
+        </view>
+      </view>
+    </view>
+    <view class="floorCon">
+      <view class="floor" wx:for="{{roomDataList}}" wx:key="{{key}}" data-index="{{index}}" wx:for-item="item">
+        <view class="layer">{{showFloor[index]}}</view>
+        <view class="roomList">
+          <view class="roomDetail {{item.isFree === 1 ? 'none' : 'active' }}" wx:for="{{item}}" wx:key="key2">
+            <text class="{{item.isFree === 1 ? 'noneText' : 'activeText' }}">{{item.roomStatus}}</text>
+            <text class="roomName">{{item.roomName}}</text>
+            <text class="roomType">{{item.roomType}}</text>
+          </view>
+        </view>
+      </view>
+    </view>
+    <Placeholder :show.sync="show" message="暂无数据"></Placeholder>
+  </view>
+  <TabBarBottom2></TabBarBottom2>
+</template>
+
+<script>
+  import wepy from 'wepy'
+  import base from '../mixins/base'
+  import http from '../mixins/http'
+  import {
+    service
+  } from '../assets/interface/interface.js'
+  import tip from '../assets/utils/tip.js'
+  import TitleBar from '../components/TitleBar'
+  import Placeholder from '../components/Placeholder'
+  import TabBarBottom2 from '../components/TabBarBottom2'
+  export default class AroomState extends wepy.page {
+    mixins = [base, http]
+    config = {}
+    data = {
+      titleText: '',
+      roomStateList: ['全部房态'],
+      roomStateIndex: 0,
+      showRoomStateText: '全部房态',
+      roomTypeList: ['全部房型'],
+      roomTypeIndex: 0,
+      showRoomTypeText: '全部房型',
+      roleList: ['商 家'],
+      roleIndex: 0,
+      roomDataList: {},
+      showFloor: [],
+      roomStatusArr: [],
+      show: false
+    }
+    components = {
+      TitleBar,
+      TabBarBottom2,
+      Placeholder
+    }
+    onLoad(options) {
+      this.getRoomStatus()
+      this.getRoomType()
+      this.getData(0, 100)
+      this.$apply()
+    }
+    onShow() {
+      this.titleText = '房间状态'
+    }
+    methods = {
+      selectedRoomState(e) {
+        let index = e.detail.value
+        this.roomStateIndex = index
+        this.showRoomStateText = this.roomStateList[index]
+        this.getData(1, Number(index))
+      },
+      selectedRoomType(e) {
+        let index = e.detail.value
+        this.roomTypeIndex = index
+        this.showRoomTypeText = this.roomTypeList[index]
+        this.getData(2, Number(index))
+      }
+    }
+    // 获取所有房态
+    getRoomStatus() {
+      var that = this
+      that.$get({
+        url: service.getRoomStatusList,
+        data: {
+          shopID: '00650'
+          // shopID: wepy.getStorageSync('shopId')
+        }
+      }, {
+        success: ({
+          data
+        }) => {
+          this.dealTwoStatus(0, data)
+        }
+      })
+    }
+    // 获取所有房型
+    getRoomType() {
+      var that = this
+      that.$get({
+        url: service.getRoomTypeList,
+        data: {
+          shopID: '00650'
+          // shopID: wepy.getStorageSync('shopId')
+        }
+      }, {
+        success: ({
+          data
+        }) => {
+          this.dealTwoStatus(1, data)
+        }
+      })
+    }
+    // 合并处理获取到的房态、房型
+    dealTwoStatus(num, data) {
+      let that = this
+      let code = data.errorCode
+      if (code === 0) {
+        if (num === 0) {
+          data.data.map((item) => {
+            that.roomStateList.push(item.roomStatus)
+          })
+        } else if (num === 1) {
+          data.data.map((item) => {
+            that.roomTypeList.push(item.roomType)
+          })
+        }
+      } else {
+        tip.alert(data.errorDesc)
+      }
+    }
+    // 获取数据
+    getData(num, index) {
+      let that = this
+      tip.loading()
+      // 条件请求数据
+      if (num === 0) {
+        that.getAllDataList()
+      } else if (num === 1) {
+        if (index === 0) {
+          that.getAllDataList()
+        } else {
+          that.getRoomStatusList(index)
+        }
+      } else if (num === 2) {
+        if (index === 0) {
+          that.getAllDataList(index)
+        } else {
+          that.getRoomTypesList(index)
+        }
+      }
+    }
+    // 获取全部Data
+    getAllDataList() {
+      let that = this
+      that.$get({
+        url: service.getRoomList,
+        data: {
+          shopID: wepy.getStorageSync('shopId')
+        }
+      }, {
+        success: ({
+          data
+        }) => {
+          // 分两类：1 空闲；0.非空闲
+          let floorArr = Object.keys(data.data)
+          that.showFloor = that.getFloor(floorArr)
+          that.transDealData(data)
+        }
+      })
+    }
+    // 获取当前选择房态Data
+    getRoomStatusList(index) {
+      let that = this
+      that.$get({
+        url: service.getRoomList,
+        data: {
+          shopID: wepy.getStorageSync('shopId'),
+          roomStatus: this.roomStateList[index]
+        }
+      }, {
+        success: ({
+          data
+        }) => {
+          this.transDealData(data)
+        }
+      })
+    }
+    // 获取当前选择房型Data
+    getRoomTypesList(index) {
+      let that = this
+      that.$get({
+        url: service.getRoomList,
+        data: {
+          shopID: wepy.getStorageSync('shopId'),
+          roomType: this.roomTypeList[index]
+        }
+      }, {
+        success: ({
+          data
+        }) => {
+          this.transDealData(data)
+        }
+      })
+    }
+    // 判断数据是否成功请求
+    transDealData(data) {
+      let code = data.errorCode
+      if (code === 0) {
+        let datas = data.data
+        this.dealData(datas)
+        this.$apply()
+      } else {
+        tip.alert(data.errorDesc)
+      }
+    }
+    // 处理返回数据中空闲、非空闲的两种状态
+    dealData(data) {
+      tip.loaded()
+      var length = 0
+      for (var key in data) {
+        var item = data[key]
+        length += item.length
+        item.map(temp => {
+          if (temp.roomStatus === '空闲') {
+            // 1:表示空闲
+            temp.isFree = 1
+          } else {
+            // 0:表示空闲
+            temp.isFree = 0
+          }
+        })
+      }
+      this.dealDataLen(length)
+      this.roomDataList = data
+    }
+    // 根据返回数据中数组长度，判断noneData数据的显隐
+    dealDataLen(length) {
+      switch (length) {
+        case 0:
+          this.show = true
+          break
+        case 50:
+          this.show = false
+          break
+        default:
+          this.show = false
+      }
+    }
+  }
+</script>
+
+<style lang="scss" scoped>
+  @import "../assets/stylesheets/layout.scss";
+  .roomState-page {
+    width: 100%;
+    overflow: hidden;
+    .optCon {
+      width: 100%;
+      height: 86rpx;
+      position: fixed;
+      left: 0;
+      background-color: #F4F4F4;
+      padding: 20rpx 30rpx 0 30rpx;
+      overflow: hidden;
+      z-index: 100;
+      .optRoom {
+        width: 90%;
+        height: 80rpx;
+        background-color: #fff;
+        overflow: hidden;
+        border-radius: 10rpx;
+        line-height: 80rpx;
+        font-size: 26rpx;
+        display: flex;
+        font-weight: 450;
+        -moz-box-shadow: 0 4px 6px 0 rgba(0, 0, 0, 0.15);
+        -webkit-box-shadow: 0 4px 6px 0 rgba(0, 0, 0, 0.15);
+        box-shadow: 0 3px 5px 0 rgba(0, 0, 0, 0.15);
+        .opt {
+          flex: 1;
+          text-align: center;
+          padding: 0 20rpx;
+          text {
+            &:nth-of-type(2) {
+              font-size: 22rpx;
+              margin-left: 10rpx;
+            }
+          }
+        }
+      }
+    }
+    .floorCon {
+      position: relative;
+      overflow: hidden;
+      margin-top: 120rpx;
+      margin-bottom: 120rpx;
+      .floor {
+        height: 100%;
+        font-size: 0;
+        margin: 0 52rpx;
+        .layer {
+          font-size: 36rpx;
+          color: #333333;
+          margin-bottom: 20rpx;
+        }
+        .roomList {
+          display: flex;
+          font-size: 26rpx;
+          flex-wrap: wrap;
+          .roomDetail {
+            height: 140rpx;
+            width: 140rpx;
+            margin-bottom: 20rpx;
+            border-radius: 10rpx;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: #333333;
+            &:nth-of-type(4n-1) {
+              margin-right: 20rpx;
+            }
+            &:nth-of-type(4n-2) {
+              margin-right: 20rpx;
+            }
+            &:nth-of-type(4n-3) {
+              margin-right: 20rpx;
+            }
+            &:nth-of-type(4n) {
+              margin-right: 0;
+            }
+            .roomName {
+              font-size: 30rpx;
+            }
+            .roomType {
+              font-size: 20rpx;
+            }
+            .noneText {
+              display: none;
+            }
+            .activeText {
+              padding-left: 36px;
+              padding-bottom: 10rpx;
+              color: #D0021B;
+              font-size: 20rpx;
+            }
+          }
+          .none {
+            background-color: #93DEA1;
+          }
+          .active {
+            background-color: #D8D8D8;
+          }
+        }
+      }
+    }
+  }
+</style>
